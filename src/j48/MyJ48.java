@@ -2,13 +2,27 @@ package j48;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.Sourcable;
-import weka.classifiers.trees.j48.*;
-import weka.core.*;
-
+import weka.classifiers.trees.j48.BinC45ModelSelection;
+import weka.classifiers.trees.j48.C45ModelSelection;
+import weka.classifiers.trees.j48.ClassifierTree;
+import weka.classifiers.trees.j48.ModelSelection;
+import weka.classifiers.trees.j48.PruneableClassifierTree;
+import weka.core.AdditionalMeasureProducer;
+import weka.core.Capabilities;
+import weka.core.Drawable;
+import weka.core.Instance;
+import weka.core.Instances;
+import weka.core.Matchable;
+import weka.core.OptionHandler;
+import weka.core.Summarizable;
+import weka.core.TechnicalInformation;
+import weka.core.TechnicalInformationHandler;
+import weka.core.WeightedInstancesHandler;
 import java.util.Enumeration;
+import java.util.Vector;
 
 /**
- * Created by rikysamuel on 9/22/2015.
+ * Created by Rikysamuel on 9/22/2015.
  */
 public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matchable, Sourcable,
         WeightedInstancesHandler, Summarizable, AdditionalMeasureProducer, TechnicalInformationHandler {
@@ -49,12 +63,37 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
 
     @Override
     public Enumeration enumerateMeasures() {
-        return null;
+        Vector newVector = new Vector(3);
+        newVector.addElement("measureTreeSize");
+        newVector.addElement("measureNumLeaves");
+        newVector.addElement("measureNumRules");
+        return newVector.elements();
     }
 
     @Override
-    public double getMeasure(String s) {
-        return 0;
+    public double getMeasure(String additionalMeasureName) {
+        if (additionalMeasureName.compareToIgnoreCase("measureNumRules") == 0) {
+            return measureNumRules();
+        } else if (additionalMeasureName.compareToIgnoreCase("measureTreeSize") == 0) {
+            return measureTreeSize();
+        } else if (additionalMeasureName.compareToIgnoreCase("measureNumLeaves") == 0) {
+            return measureNumLeaves();
+        } else {
+            throw new IllegalArgumentException(additionalMeasureName
+                    + " not supported (j48)");
+        }
+    }
+
+    public double measureNumRules() {
+        return root.numLeaves();
+    }
+
+    public double measureNumLeaves() {
+        return root.numLeaves();
+    }
+
+    public double measureTreeSize() {
+        return root.numNodes();
     }
 
     @Override
@@ -66,7 +105,7 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
         else
             modSelection = new C45ModelSelection(iMinInstances, instances);
         if (!bReducedErrorPruning)
-            root = new C45PruneableClassifierTree(modSelection, !bUnpruned, fCF,
+            root = new MyC45PruneableClassifierTree(modSelection, !bUnpruned, fCF,
                     bSubtreeRaising, !bNoCleanup);
         else
             root = new PruneableClassifierTree(modSelection, !bUnpruned, iReducedErrorPruningNumFolds,
@@ -131,12 +170,83 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
         return result;
     }
 
+    public boolean isbUnpruned() {
+        return bUnpruned;
+    }
+
+    public void setbUnpruned(boolean bUnpruned) {
+        this.bUnpruned = bUnpruned;
+    }
+
+    public float getfCF() {
+        return fCF;
+    }
+
+    public void setfCF(float fCF) {
+        this.fCF = fCF;
+    }
+
+    public int getiMinInstances() {
+        return iMinInstances;
+    }
+
+    public void setiMinInstances(int iMinInstances) {
+        this.iMinInstances = iMinInstances;
+    }
+
+    public boolean isbReducedErrorPruning() {
+        return bReducedErrorPruning;
+    }
+
+    public void setbReducedErrorPruning(boolean bReducedErrorPruning) {
+        if (bReducedErrorPruning) {
+            bUnpruned = false;
+        }
+        this.bReducedErrorPruning = bReducedErrorPruning;
+    }
+
+    public int getiReducedErrorPruningNumFolds() {
+        return iReducedErrorPruningNumFolds;
+    }
+
+    public void setiReducedErrorPruningNumFolds(int iReducedErrorPruningNumFolds) {
+        this.iReducedErrorPruningNumFolds = iReducedErrorPruningNumFolds;
+    }
+
+    public boolean isbBinarySplitsNominalAttribute() {
+        return bBinarySplitsNominalAttribute;
+    }
+
+    public void setbBinarySplitsNominalAttribute(boolean bBinarySplitsNominalAttribute) {
+        this.bBinarySplitsNominalAttribute = bBinarySplitsNominalAttribute;
+    }
+
     public int getSeed() {
        return seedReducedErrorPruning;
     }
 
     public void setSeedReducedErrorPruning(int seedReducedErrorPruning) {
         this.seedReducedErrorPruning = seedReducedErrorPruning;
+    }
+
+    public boolean isbSubtreeRaising() {
+        return bSubtreeRaising;
+    }
+
+    public void setbSubtreeRaising(boolean bSubtreeRaising) {
+        this.bSubtreeRaising = bSubtreeRaising;
+    }
+
+    public boolean isbNoCleanup() {
+        return bNoCleanup;
+    }
+
+    public void setbNoCleanup(boolean bNoCleanup) {
+        this.bNoCleanup = bNoCleanup;
+    }
+
+    public int getSeedReducedErrorPruning() {
+        return seedReducedErrorPruning;
     }
 
     public boolean isbEnableLaplace() {
