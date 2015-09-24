@@ -254,9 +254,13 @@ public class Util {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-       // Util.loadARFF("D:\\Weka-3-6\\data\\weather.nominal.arff");
-       // Util.buildModel("id3",Util.getData());
-
+        Util.loadARFF("D:\\Weka-3-6\\data\\weather.nominal.arff");
+        Util.buildModel("id3", Util.getData());
+        System.out.println(Util.getClassifier());
+        Util.saveClassifier("D:\\model1.model");
+        Util.loadClassifer("D:\\model1.model");
+        Util.loadARFF("D:\\test.arff");
+        Util.doClassify(Util.getClassifier(), Util.getData());
 
 //        Util.PercentageSplit(ins, "1-4", 66, "J48");
 //        Util.buildModel("naivebayes", Util.getData());
