@@ -126,8 +126,6 @@ public class MyID3 extends Classifier implements TechnicalInformationHandler, So
             ArrayList<Attribute> remainingAttributes = attributes;
             int indexAttributeDeleted = 0;
             for (int i=0; i<remainingAttributes.size(); i++) {
-                //System.out.println("huhu " + remainingAttributes.get(i).index());
-                //System.out.println("huhu2 " + currentAttribute.index());
                 if (remainingAttributes.get(i).index() == currentAttribute.index()) {
                     indexAttributeDeleted = i;
                 }
