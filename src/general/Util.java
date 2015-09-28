@@ -1,6 +1,9 @@
 package general;
 
 import java.io.*;
+
+import id3.MyID3;
+import weka.classifiers.trees.Id3;
 import weka.core.converters.CSVLoader;
 import java.io.File;
 import java.util.Random;
@@ -120,6 +123,8 @@ public class Util {
                 case "j48" :
                     classifier = (Classifier) new J48();
                     break;
+                case "id3" :
+                    classifier = (Classifier) new MyID3();
                 default :
                     break;
             }
@@ -250,9 +255,13 @@ public class Util {
      */
     public static void main(String[] args) {
         Util.loadARFF("D:\\Weka-3-6\\data\\weather.nominal.arff");
-        System.out.println(Util.getData().numClasses());
-        double[] a = new double[2];
-        System.out.println(a[1]);
+        Util.buildModel("id3", Util.getData());
+        System.out.println(Util.getClassifier());
+        Util.saveClassifier("D:\\model1.model");
+        Util.loadClassifer("D:\\model1.model");
+        Util.loadARFF("D:\\test.arff");
+        Util.doClassify(Util.getClassifier(), Util.getData());
+
 //        Util.PercentageSplit(ins, "1-4", 66, "J48");
 //        Util.buildModel("naivebayes", Util.getData());
 //        Util.FoldSchema(Util.getData(), 10);

@@ -5,6 +5,8 @@
  */
 package id3;
 
+import general.Util;
+import sun.awt.SunHints;
 import weka.classifiers.Classifier;
 import weka.classifiers.Sourcable;
 import weka.core.Attribute;
@@ -15,6 +17,14 @@ import weka.core.NoSupportForMissingValuesException;
 import weka.core.RevisionUtils;
 import weka.core.TechnicalInformation;
 import weka.core.TechnicalInformationHandler;
+import weka.core.pmml.FieldMetaInfo;
+
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Enumeration;
 
 
 /**
@@ -59,26 +69,103 @@ public class MyID3 extends Classifier implements TechnicalInformationHandler, So
         // Remove missing value instance from instances
         instances = new Instances(instances);
         instances.deleteWithMissingClass();
+        instances.setClassIndex(instances.numAttributes()-1);
 
-        // Build the classifier
-        buildMyID3(instances);
+        // Gather list of attribute in instances
+        ArrayList<Attribute> remainingAttributes = new ArrayList<>();
+        Enumeration enumAttributes = instances.enumerateAttributes();
+        while (enumAttributes.hasMoreElements()) {
+            remainingAttributes.add((Attribute) enumAttributes.nextElement());
+        }
+        // Start build classifier ID3
+        buildMyID3(instances, remainingAttributes);
     }
 
     /**
      * Algoritma pohon keputusan
      * @param instances data train
+     * @param attributes remaining attributes
      * @throws Exception
      */
-    public void buildMyID3(Instances instances) throws Exception {
-        // Check if instance is not empty
+    public void buildMyID3(Instances instances, ArrayList<Attribute> attributes) throws Exception {
+        // Check if no instances have reached this node.
         if (instances.numInstances() == 0) {
-            currentAttribute = null;
+            classAttribute = null;
             classLabel = Instance.missingValue();
-            classDistributionAmongInstances = new double[instances.numInstances()];
-        } else {
-            // Compute Information Gain (IG) from each attribute
-
+            classDistributionAmongInstances = new double[instances.numClasses()];
+            return;
         }
+        // Check if all instances only contain one class label
+        if (computeEntropy(instances) == 0) {
+            currentAttribute = null;
+            classDistributionAmongInstances = classDistribution(instances);
+            // Labelling process at node
+            for (int i=0; i<classDistributionAmongInstances.length; i++) {
+                if (classDistributionAmongInstances[i] > 0) {
+                    classLabel = i;
+                }
+            }
+            classAttribute = instances.classAttribute();
+        } else {
+            // Compute infogain for each attribute
+            double[] infoGainAttribute = new double[instances.numAttributes()];
+            for (int i=0; i<instances.numAttributes(); i++) {
+                infoGainAttribute[i] = computeIG(instances,instances.attribute(i));
+            }
+            // Choose attribute with maximum information gain
+            int indexMaxInfoGain = 0;
+            double maximumInfoGain = 0.0;
+            for (int i=0; i<(infoGainAttribute.length-1); i++) {
+                if (infoGainAttribute[i] > maximumInfoGain) {
+                    maximumInfoGain = infoGainAttribute[i];
+                    indexMaxInfoGain = i;
+                }
+            }
+            currentAttribute = instances.attribute(indexMaxInfoGain);
+            // Delete current attribute from remaining attribute
+            ArrayList<Attribute> remainingAttributes = attributes;
+            int indexAttributeDeleted = 0;
+            for (int i=0; i<remainingAttributes.size(); i++) {
+                if (remainingAttributes.get(i).index() == currentAttribute.index()) {
+                    indexAttributeDeleted = i;
+                }
+            }
+            remainingAttributes.remove(indexAttributeDeleted);
+            // Split instances based on currentAttribute (create branch new node)
+            Instances[] instancesSplitBasedAttribute = splitData(instances,currentAttribute);
+            subTree = new MyID3[currentAttribute.numValues()];
+            for (int i=0; i<currentAttribute.numValues(); i++) {
+                if (instancesSplitBasedAttribute[i].numInstances() == 0) {
+                    classDistributionAmongInstances = classDistribution(instances);
+                    // Labelling process at node
+                    classLabel = 0.0;
+                    double counterDistribution = 0.0;
+                    for (int j=0; j<classDistributionAmongInstances.length; j++) {
+                        if (classDistributionAmongInstances[j] > counterDistribution) {
+                            classLabel = j;
+                        }
+                    }
+                    classAttribute = instances.classAttribute();
+                } else {
+                    subTree[i] = new MyID3();
+                    subTree[i].buildMyID3(instancesSplitBasedAttribute[i],remainingAttributes);
+                }
+            }
+        }
+    }
+
+    /**
+     * Algoritma untuk menghitung distribusi kelas
+     * @param instances
+     * @return distributionClass counter
+     */
+    public double[] classDistribution(Instances instances) {
+        // Compute class distribution counter from instances
+        double[] distributionClass = new double[instances.numClasses()];
+        for (int i=0; i<instances.numInstances(); i++) {
+            distributionClass[(int) instances.instance(i).classValue()]++;
+        }
+        return distributionClass;
     }
 
     @Override
@@ -250,7 +337,15 @@ public class MyID3 extends Classifier implements TechnicalInformationHandler, So
      * @return hasil information gain
      */
     public double computeIG(Instances data, Attribute att) {
-        return 0.0;
+        // Split instances based on attribute values
+        Instances[] instancesSplitBasedAttribute = splitData(data, att);
+        // Compute information gain based on instancesSplitBasedAttribute
+        double entrophyOverall = computeEntropy(data);
+        for (int i=0; i<instancesSplitBasedAttribute.length; i++) {
+            entrophyOverall -= ((double) instancesSplitBasedAttribute[i].numInstances() / (double) data.numInstances())
+                    * computeEntropy(instancesSplitBasedAttribute[i]);
+        }
+        return entrophyOverall;
     }
 
     /**
@@ -259,7 +354,20 @@ public class MyID3 extends Classifier implements TechnicalInformationHandler, So
      * @return hasil perhitungan entropy
      */
     public double computeEntropy(Instances data) {
-        return 0.0;
+        // Compute class distribution counter from instances
+        double[] distributionClass = classDistribution(data);
+        // Compute entrophy from class distribution counter
+        double entrophy = 0.0;
+        for (int i=0; i<distributionClass.length; i++) {
+            double operanLog2 = distributionClass[i] / (double) data.numInstances();
+            if (operanLog2 != 0) {
+                entrophy -= (distributionClass[i] / (double) data.numInstances())
+                        * (Math.log(operanLog2) / Math.log(2));
+            } else {
+                entrophy -= 0;
+            }
+        }
+        return entrophy;
     }
 
     /**
@@ -269,7 +377,14 @@ public class MyID3 extends Classifier implements TechnicalInformationHandler, So
      * @return instance hasil split
      */
     public Instances[] splitData(Instances data, Attribute att) {
-        return null;
+        Instances[] instancesSplitBasedAttribute = new Instances[att.numValues()];
+        for (int i=0; i<att.numValues(); i++) {
+            instancesSplitBasedAttribute[i] = new Instances(data,data.numInstances());
+        }
+        for (int i=0; i<data.numInstances(); i++) {
+            instancesSplitBasedAttribute[(int) data.instance(i).value(att)].add(data.instance(i));
+        }
+        return instancesSplitBasedAttribute;
     }
 
     /**
@@ -285,7 +400,45 @@ public class MyID3 extends Classifier implements TechnicalInformationHandler, So
      * @param args arguments
      */
     public static void main(String[] args) {
-        runClassifier(new MyID3(), args);
+        // runClassifier(new MyID3(), args);
+        Instances instances;
+        try {
+            BufferedReader reader = new BufferedReader(
+                    new FileReader("D:\\Weka-3-6\\data\\weather.nominal.arff"));
+            try {
+                instances = new Instances(reader);
+                instances.setClassIndex(instances.numAttributes() - 1);
+                MyID3 id3 = new MyID3();
+                try {
+                    id3.buildClassifier(instances);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                // Test class distribution
+                double[] classDistribution = id3.classDistribution(instances);
+                for (int i=0; i<classDistribution.length; i++) {
+                    System.out.println(classDistribution[i]);
+                }
+                // Test entrophy and information gain for each attribute
+                System.out.println(id3.computeEntropy(instances));
+                Enumeration attributes = instances.enumerateAttributes();
+                while (attributes.hasMoreElements()) {
+                    System.out.println(id3.computeIG(instances,(Attribute) attributes.nextElement()));
+                }
+                // Test build classifier
+                try {
+                    id3.buildClassifier(instances);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                System.out.println(id3.toString());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
     }
 
 
