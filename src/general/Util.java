@@ -166,7 +166,7 @@ public class Util {
     public static void FoldSchema(Instances data, int folds) {
         try {
             Evaluation eval = new Evaluation(data);
-            eval.crossValidateModel(classifier, data, folds, new Random(1000));
+            eval.crossValidateModel(classifier, data, folds, new Random(1));
             System.out.println(eval.toSummaryString("\nResults " + folds + " folds cross-validation\n\n", false));
         } catch (Exception ex) {
             Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
@@ -180,10 +180,62 @@ public class Util {
     public static void FullSchema(Instances data) {
         try {
             Evaluation eval = new Evaluation(data);
-            eval.evaluateModel(classifier,data);
+            eval.evaluateModel(classifier, data);
             System.out.println(eval.toSummaryString("\nResults Full-Training\n\n", false));
         } catch (Exception ex) {
             Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    /**
+     * show learning statistic result by using test sets
+     * @param testPath
+     * @param typeTestFile
+     */
+    public static void TestSchema(String testPath, String typeTestFile) {
+        Instances testsets = null;
+        // Load test instances based on file type and path
+        if (typeTestFile.equals("arff")) {
+            FileReader file = null;
+            try {
+                file = new FileReader(testPath);
+                try (BufferedReader reader = new BufferedReader(file)) {
+                    testsets = new Instances(reader);
+                }
+                // setting class attribute
+                testsets.setClassIndex(data.numAttributes() - 1);
+            } catch (FileNotFoundException ex) {
+                Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
+            } finally {
+                try {
+                    if (file!=null) {
+                        file.close();
+                    }
+                } catch (IOException ex) {
+                    Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        } else if (typeTestFile.equals("csv")) {
+            try {
+                CSVLoader csv = new CSVLoader();
+                csv.setFile(new File(testPath));
+                data = csv.getDataSet();
+
+                // setting class attribute
+                data.setClassIndex(data.numAttributes() - 1);
+            } catch (IOException ex) {
+                Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        // Start evaluate model using instances test and print results
+        try {
+            Evaluation eval = new Evaluation(Util.getData());
+            eval.evaluateModel(Util.getClassifier(), testsets);
+            System.out.println(eval.toSummaryString("\nResults\n\n", false));
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
     
@@ -198,17 +250,27 @@ public class Util {
         try {
             int trainSize = (int) Math.round(data.numInstances()* trainPercent / 100);
             int testSize = data.numInstances() - trainSize;
+            System.out.println("trainSize " + trainSize);
+            System.out.println("testSize " + testSize);
             
-            data.randomize(new Random());
+            data.randomize(new Random(1));
+            for (int i=0; i<data.numInstances(); i++) {
+                System.out.println("Harakiri : " + data.instance(i));
+            }
             Instances train = new Instances(data, 0, trainSize);
             Instances test = new Instances(data, trainSize, testSize);
-            
+            train.setClassIndex(train.numAttributes()-1);
+            test.setClassIndex(test.numAttributes()-1);
+
             switch (Classifier.toLowerCase()) {
                 case "naivebayes" :
                     classifier = (Classifier) new NaiveBayes();
                     break;
                 case "j48" :
                     classifier = (Classifier) new J48();
+                    break;
+                case "id3" :
+                    classifier = (Classifier) new MyID3();
                     break;
                 default :
                     break;
@@ -225,6 +287,16 @@ public class Util {
                     Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
+
+            // Start evaluate model using instances test and print results
+            try {
+                Evaluation eval = new Evaluation(train);
+                eval.evaluateModel(classifier, test);
+                System.out.println(eval.toSummaryString("\nResults\n\n", false));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
         } catch (Exception ex) { 
             Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -257,10 +329,14 @@ public class Util {
         Util.loadARFF("D:\\Weka-3-6\\data\\weather.nominal.arff");
         Util.buildModel("id3", Util.getData());
         System.out.println(Util.getClassifier());
-        Util.saveClassifier("D:\\model1.model");
-        Util.loadClassifer("D:\\model1.model");
-        Util.loadARFF("D:\\test.arff");
-        Util.doClassify(Util.getClassifier(), Util.getData());
+
+         Util.PercentageSplit(Util.getData(), "1-4", 66, "id3");
+        // Util.FullSchema(Util.getData());
+       // Util.FoldSchema(Util.getData(), 5);
+        //Util.TestSchema("D:\\test.arff","arff");
+
+       // Util.loadARFF("D:\\test.arff");
+       // Util.doClassify(Util.getClassifier(), Util.getData());
 
 //        Util.PercentageSplit(ins, "1-4", 66, "J48");
 //        Util.buildModel("naivebayes", Util.getData());

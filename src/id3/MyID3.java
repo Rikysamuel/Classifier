@@ -8,15 +8,10 @@ package id3;
 import general.Util;
 import sun.awt.SunHints;
 import weka.classifiers.Classifier;
+import weka.classifiers.Evaluation;
 import weka.classifiers.Sourcable;
-import weka.core.Attribute;
-import weka.core.Capabilities;
-import weka.core.Instance;
-import weka.core.Instances;
-import weka.core.NoSupportForMissingValuesException;
-import weka.core.RevisionUtils;
-import weka.core.TechnicalInformation;
-import weka.core.TechnicalInformationHandler;
+import weka.classifiers.trees.Id3;
+import weka.core.*;
 import weka.core.pmml.FieldMetaInfo;
 
 import java.io.BufferedReader;
@@ -69,7 +64,6 @@ public class MyID3 extends Classifier implements TechnicalInformationHandler, So
         // Remove missing value instance from instances
         instances = new Instances(instances);
         instances.deleteWithMissingClass();
-        instances.setClassIndex(instances.numAttributes()-1);
 
         // Gather list of attribute in instances
         ArrayList<Attribute> remainingAttributes = new ArrayList<>();
@@ -103,9 +97,11 @@ public class MyID3 extends Classifier implements TechnicalInformationHandler, So
             for (int i=0; i<classDistributionAmongInstances.length; i++) {
                 if (classDistributionAmongInstances[i] > 0) {
                     classLabel = i;
+                    break;
                 }
             }
             classAttribute = instances.classAttribute();
+            Utils.normalize(classDistributionAmongInstances);
         } else {
             // Compute infogain for each attribute
             double[] infoGainAttribute = new double[instances.numAttributes()];
@@ -136,16 +132,16 @@ public class MyID3 extends Classifier implements TechnicalInformationHandler, So
             subTree = new MyID3[currentAttribute.numValues()];
             for (int i=0; i<currentAttribute.numValues(); i++) {
                 if (instancesSplitBasedAttribute[i].numInstances() == 0) {
-                    classDistributionAmongInstances = classDistribution(instances);
+                  /*  double[] currentClassDistribution = classDistribution(instances);
                     // Labelling process at node
                     classLabel = 0.0;
                     double counterDistribution = 0.0;
-                    for (int j=0; j<classDistributionAmongInstances.length; j++) {
-                        if (classDistributionAmongInstances[j] > counterDistribution) {
+                    for (int j=0; j<currentClassDistribution.length; j++) {
+                        if (currentClassDistribution[j] > counterDistribution) {
                             classLabel = j;
                         }
                     }
-                    classAttribute = instances.classAttribute();
+                    classAttribute = instances.classAttribute(); */
                 } else {
                     subTree[i] = new MyID3();
                     subTree[i].buildMyID3(instancesSplitBasedAttribute[i],remainingAttributes);
@@ -371,7 +367,7 @@ public class MyID3 extends Classifier implements TechnicalInformationHandler, So
     }
 
     /**
-     * Membagi dataset menurut atribut value
+     * Membagi dataset menurut atribute value
      * @param data instance
      * @param att atribut input
      * @return instance hasil split
@@ -400,7 +396,6 @@ public class MyID3 extends Classifier implements TechnicalInformationHandler, So
      * @param args arguments
      */
     public static void main(String[] args) {
-        // runClassifier(new MyID3(), args);
         Instances instances;
         try {
             BufferedReader reader = new BufferedReader(
@@ -416,14 +411,14 @@ public class MyID3 extends Classifier implements TechnicalInformationHandler, So
                 }
                 // Test class distribution
                 double[] classDistribution = id3.classDistribution(instances);
-                for (int i=0; i<classDistribution.length; i++) {
+                for (int i = 0; i < classDistribution.length; i++) {
                     System.out.println(classDistribution[i]);
                 }
                 // Test entrophy and information gain for each attribute
                 System.out.println(id3.computeEntropy(instances));
                 Enumeration attributes = instances.enumerateAttributes();
                 while (attributes.hasMoreElements()) {
-                    System.out.println(id3.computeIG(instances,(Attribute) attributes.nextElement()));
+                    System.out.println(id3.computeIG(instances, (Attribute) attributes.nextElement()));
                 }
                 // Test build classifier
                 try {
@@ -432,14 +427,37 @@ public class MyID3 extends Classifier implements TechnicalInformationHandler, So
                     e.printStackTrace();
                 }
                 System.out.println(id3.toString());
+                // Evaluate model from build classifier (full training)
+                Evaluation eval = null;
+                try {
+                    eval = new Evaluation(instances);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                try {
+                    System.out.println(instances);
+                    eval.evaluateModel(id3, instances);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                System.out.println(eval.toSummaryString("\nResults Full-Training\n\n", false));
+                // Evaluate model from build classifier (test set)
+
+                // Test Confusion Matrix
+                System.out.println("Confusion Matrix : ");
+                double[][] cmMatrix = eval.confusionMatrix();
+                for(int row_i=0; row_i<cmMatrix.length; row_i++){
+                    for(int col_i=0; col_i<cmMatrix.length; col_i++){
+                        System.out.print(cmMatrix[row_i][col_i]);
+                        System.out.print("|");
+                    }
+                    System.out.println();
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-
     }
-
-
 }
