@@ -4,7 +4,6 @@ import java.io.*;
 
 import id3.MyID3;
 import j48.MyJ48;
-import weka.classifiers.trees.Id3;
 import weka.core.converters.CSVLoader;
 import java.io.File;
 import java.util.Random;
@@ -13,15 +12,8 @@ import java.util.logging.Logger;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.bayes.NaiveBayes;
-import weka.classifiers.functions.LinearRegression;
-import weka.classifiers.meta.FilteredClassifier;
-import weka.classifiers.trees.J48;
 import weka.core.Instances;
 import weka.core.SerializationHelper;
-import weka.core.tokenizers.WordTokenizer;
-import weka.filters.Filter;
-import weka.filters.unsupervised.attribute.NominalToString;
-import weka.filters.unsupervised.attribute.StringToWordVector;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -167,7 +159,7 @@ public class Util {
     public static void FoldSchema(Instances data, int folds) {
         try {
             Evaluation eval = new Evaluation(data);
-            eval.crossValidateModel(classifier, data, folds, new Random(1));
+            eval.crossValidateModel(Util.getClassifier(), data, folds, new Random(1));
             System.out.println(eval.toSummaryString("\nResults " + folds + " folds cross-validation\n\n", false));
         } catch (Exception ex) {
             Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
@@ -322,41 +314,5 @@ public class Util {
             }
         }
     }
-    
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String[] args) {
-        Util.loadARFF("C:\\Program Files\\Weka-3-7\\data\\weather.nominal.arff");
-        Util.buildModel("j48", Util.getData());
-        System.out.println(Util.getClassifier());
 
-//         Util.PercentageSplit(Util.getData(), "1-4", 66, "id3");
-        Util.FullSchema(Util.getData());
-//       Util.FoldSchema(Util.getData(), 10);
-        //Util.TestSchema("D:\\test.arff","arff");
-
-       // Util.loadARFF("D:\\test.arff");
-       // Util.doClassify(Util.getClassifier(), Util.getData());
-
-//        Util.PercentageSplit(ins, "1-4", 66, "J48");
-//        Util.buildModel("naivebayes", Util.getData());
-//        Util.FoldSchema(Util.getData(), 10);
-//        Util.FullSchema(Util.getData());
-
-//        Util.loadCSV("C:\\Program Files\\Weka-3-7\\data\\weather.nominal.csv");
-//        Instances ins = Util.filterNominalToString(Util.getData(),"1-4");
-//        Util.filterClassifier("NaiveBayes", ins, "1-4");
-//        Util.PercentageSplit(ins, "1-4", 66, "NaiveBayes");
-//        Util.FoldSchema(ins, 10);
-//        Util.FullSchema(ins);
-        
-//        System.out.println(Util.getData());
-//        Util.saveClassifier("D:\\model1.model");
-//        
-//          Util.loadClassifer("D:\\model1.model");
-//           Util.loadARFF("D:\\test.arff");
-//        Util.doClassify(Util.getClassifier(), Util.getData());
-    }
-    
 }
