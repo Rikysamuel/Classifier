@@ -1,9 +1,6 @@
 package j48;
 
-import com.sun.javafx.event.EventDispatchTreeImpl;
 import weka.classifiers.trees.j48.Distribution;
-import weka.classifiers.trees.j48.GainRatioSplitCrit;
-import weka.classifiers.trees.j48.InfoGainSplitCrit;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.Utils;
@@ -23,8 +20,6 @@ public class MyC45Split extends MyClassifierSplitModel {
     public double dGainRatio;
     public double dTotalWeights;
     public int iIndex;
-//    public static InfoGainSplitCrit infoGainCrit = new InfoGainSplitCrit();
-//    public static GainRatioSplitCrit gainRatioCrit = new GainRatioSplitCrit();
 
     public MyC45Split(int attIndex, int minNoObj, double sumOfWeights) {
         iAttIndex = attIndex;
@@ -66,8 +61,6 @@ public class MyC45Split extends MyClassifierSplitModel {
 
         if (dDistribution.check(iMinInstances)) {
             iNumSubsets = iComplexityIndex;
-//            dInfoGain = InfosplitCritValue(dDistribution, dTotalWeights);
-//            dGainRatio = RatiosplitCritValue(dDistribution, dTotalWeights, dInfoGain);
             dGainRatio = gainRatio(dDistribution, dTotalWeights, oldEnt(dDistribution));
         }
     }

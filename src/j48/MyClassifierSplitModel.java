@@ -63,8 +63,8 @@ public abstract class MyClassifierSplitModel implements Cloneable, Serializable,
 
         text = new StringBuffer();
         for (i=0;i<iNumSubsets;i++) {
-            text.append(leftSide(data)+rightSide(i,data)+": ");
-            text.append(dumpLabel(i,data)+"\n");
+            text.append(leftSide(data)).append(rightSide(i, data)).append(": ");
+            text.append(dumpLabel(i, data)).append("\n");
         }
         return text.toString();
     }

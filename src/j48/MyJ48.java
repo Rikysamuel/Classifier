@@ -164,8 +164,7 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
         double dErrTree;
 
         if (!bLeaf){
-            for (int i=0;i<ctSons.length;i++)
-                ctSons[i].prune();
+            for (MyJ48 ctSon : ctSons) ctSon.prune();
 
             // count error as leaf and tree
             dErrLeaf = getErrorInLeaf(csmLocalModel.dDistribution);
@@ -185,8 +184,8 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
         if (bLeaf)
             return getErrorInLeaf(csmLocalModel.dDistribution);
         else{
-            for (int i=0;i<ctSons.length;i++) {
-                err = err + ctSons[i].getErrorInTree();
+            for (MyJ48 ctSon : ctSons) {
+                err = err + ctSon.getErrorInTree();
             }
             return err;
         }
@@ -375,8 +374,8 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
             }else {
                 dumpTree(0, text);
             }
-            text.append("\n\nNumber of Leaves  : \t"+numLeaves()+"\n");
-            text.append("\nSize of the tree : \t"+numNodes()+"\n");
+            text.append("\n\nNumber of Leaves  : \t").append(numLeaves()).append("\n");
+            text.append("\nSize of the tree : \t").append(numNodes()).append("\n");
 
             return text.toString();
         } catch (Exception e) {
@@ -412,8 +411,8 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
             return 1;
         }
         else {
-            for (int i=0;i<ctSons.length;i++) {
-                num = num+ctSons[i].numLeaves();
+            for (MyJ48 ctSon : ctSons) {
+                num = num + ctSon.numLeaves();
             }
 
             return num;
@@ -428,8 +427,8 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
             return 1;
         }
         else {
-            for (int i=0;i<ctSons.length;i++) {
-                nodes = nodes + ctSons[i].numNodes();
+            for (MyJ48 ctSon : ctSons) {
+                nodes = nodes + ctSon.numNodes();
             }
 
             return nodes;
