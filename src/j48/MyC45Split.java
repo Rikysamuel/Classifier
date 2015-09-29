@@ -27,7 +27,7 @@ public class MyC45Split extends ClassifierSplitModel {
     public static InfoGainSplitCrit infoGainCrit = new InfoGainSplitCrit();
     public static GainRatioSplitCrit gainRatioCrit = new GainRatioSplitCrit();
 
-    public MyC45Split(int attIndex,int minNoObj, double sumOfWeights) {
+    public MyC45Split(int attIndex, int minNoObj, double sumOfWeights) {
         iAttIndex = attIndex;
         iMinInstances = minNoObj;
         dTotalWeights = sumOfWeights;
@@ -201,12 +201,32 @@ public class MyC45Split extends ClassifierSplitModel {
 
     @Override
     public double[] weights(Instance instance) {
-        return new double[0];
+        double [] weights;
+        int i;
+
+        if (instance.isMissing(iAttIndex)) {
+            weights = new double [m_numSubsets];
+            for (i=0;i<m_numSubsets;i++)
+                weights [i] = m_distribution.perBag(i)/m_distribution.total();
+            return weights;
+        }else{
+            return null;
+        }
     }
 
     @Override
     public int whichSubset(Instance instance) throws Exception {
-        return 0;
+        if (instance.isMissing(iAttIndex))
+            return -1;
+        else{
+            if (instance.attribute(iAttIndex).isNominal())
+                return (int)instance.value(iAttIndex);
+            else
+            if (Utils.smOrEq(instance.value(iAttIndex), dSplitValue))
+                return 0;
+            else
+                return 1;
+        }
     }
 
     @Override

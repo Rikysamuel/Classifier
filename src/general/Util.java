@@ -3,6 +3,7 @@ package general;
 import java.io.*;
 
 import id3.MyID3;
+import j48.MyJ48;
 import weka.classifiers.trees.Id3;
 import weka.core.converters.CSVLoader;
 import java.io.File;
@@ -121,7 +122,7 @@ public class Util {
                     classifier = (Classifier) new NaiveBayes();
                     break;
                 case "j48" :
-                    classifier = (Classifier) new J48();
+                    classifier = (Classifier) new MyJ48();
                     break;
                 case "id3" :
                     classifier = (Classifier) new MyID3();
@@ -208,7 +209,7 @@ public class Util {
                     classifier = (Classifier) new NaiveBayes();
                     break;
                 case "j48" :
-                    classifier = (Classifier) new J48();
+                    classifier = (Classifier) new MyJ48();
                     break;
                 default :
                     break;

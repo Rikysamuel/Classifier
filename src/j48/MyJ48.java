@@ -2,12 +2,21 @@ package j48;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.Sourcable;
-import weka.classifiers.trees.j48.*;
-
-import weka.core.*;
-
+import weka.classifiers.trees.j48.ClassifierSplitModel;
+import weka.classifiers.trees.j48.Distribution;
+import weka.core.AdditionalMeasureProducer;
+import weka.core.Capabilities;
+import weka.core.Drawable;
+import weka.core.Instance;
+import weka.core.Instances;
+import weka.core.Matchable;
+import weka.core.OptionHandler;
+import weka.core.Summarizable;
+import weka.core.TechnicalInformation;
+import weka.core.TechnicalInformationHandler;
+import weka.core.Utils;
+import weka.core.WeightedInstancesHandler;
 import java.util.Enumeration;
-import java.util.Vector;
 
 /**
  * Created by Rikysamuel on 9/22/2015.
@@ -15,28 +24,11 @@ import java.util.Vector;
  */
 public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matchable, Sourcable, WeightedInstancesHandler, Summarizable, AdditionalMeasureProducer, TechnicalInformationHandler {
 
-    private ClassifierTree root;
-    private boolean bUnpruned = false;
-    private float fCF = 0.25f;
-    private int iMinInstances = 2;
-    private boolean bEnableLaplace = false;
-    private boolean bReducedErrorPruning = false;
-    private int iReducedErrorPruningNumFolds = 3;
-    private boolean bBinarySplitsNominalAttribute = false;
-    private boolean bSubtreeRaising = true;
-    private boolean bNoCleanup = false;
-    private int seedReducedErrorPruning = 1;
-    private boolean bPruneTheTree = true;
-
+    private int testI;
     private boolean bEmpty;
     private boolean bLeaf;
-    private ModelSelection msToSelectModel;
     private ClassifierSplitModel csmLocalModel;
-    private Distribution dTest;
     private MyJ48[] ctSons;
-
-    private int minInstances = 2;
-    private Instances dataInstances;
 
     @Override
     public Capabilities getCapabilities() {
@@ -56,48 +48,25 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
 
     @Override
     public Enumeration enumerateMeasures() {
-        Vector newVector = new Vector(3);
-        newVector.addElement("measureTreeSize");
-        newVector.addElement("measureNumLeaves");
-        newVector.addElement("measureNumRules");
-        return newVector.elements();
+        return null;
     }
 
     @Override
     public double getMeasure(String additionalMeasureName) {
-        if (additionalMeasureName.compareToIgnoreCase("measureNumRules") == 0) {
-            return measureNumRules();
-        } else if (additionalMeasureName.compareToIgnoreCase("measureTreeSize") == 0) {
-            return measureTreeSize();
-        } else if (additionalMeasureName.compareToIgnoreCase("measureNumLeaves") == 0) {
-            return measureNumLeaves();
-        } else {
-            throw new IllegalArgumentException(additionalMeasureName
-                    + " not supported (j48)");
-        }
-    }
-
-    public double measureNumRules() {
-        return root.numLeaves();
-    }
-
-    public double measureNumLeaves() {
-        return root.numLeaves();
-    }
-
-    public double measureTreeSize() {
-        return root.numNodes();
+        return 0.D;
     }
 
     public final ClassifierSplitModel selectModel(Instances data) {
         MyC45Split bestModel = null;
-        NoSplit noSplitModel;
+        MyNoSplit noSplitModel;
         double averageInfoGain = 0.0D;
         int validModels = 0;
+        int minInstances = 2;
 
         try {
             Distribution checkDistribution = new Distribution(data);
-            noSplitModel = new NoSplit(checkDistribution);
+            noSplitModel = new MyNoSplit(checkDistribution);
+
             // cek jika total (jum. instances) kebih besar dari minimal instances dan cek jika seluruh instance tidak masuk ke satu class saja
             if(!Utils.sm(checkDistribution.total(), (double)(2 * minInstances)) && !Utils.eq(checkDistribution.total(), checkDistribution.perClass(checkDistribution.maxClass()))) {
 
@@ -127,24 +96,25 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
                     for(i = 0; i < data.numAttributes(); ++i) {
                         if(i != data.classIndex() && currentModel[i].checkModel() && currentModel[i].dInfoGain >= averageInfoGain - 0.001D && Utils.gr(currentModel[i].dGainRatio, minResult)) {
                             bestModel = currentModel[i];
+                            testI = i;
                             minResult = currentModel[i].dGainRatio;
                         }
                     }
 
                     if(Utils.eq(minResult, 0.0D)) {
+                        System.out.println("no split, Model: " + testI);
                         return noSplitModel;
                     } else {
                         if (bestModel!= null) {
                             bestModel.distribution().addInstWithUnknown(data, bestModel.iAttIndex);
-                            if(dataInstances != null) {
-                                bestModel.setSplitPoint(dataInstances);
-                            }
+                            bestModel.setSplitPoint(data);
                         }
-
+                        System.out.println("split, best-model: " + testI);
                         return bestModel;
                     }
                 }
             } else {
+                System.out.println("no split, " + checkDistribution.maxClass());
                 return noSplitModel;
             }
         } catch (Exception e) {
@@ -159,19 +129,18 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
         instances.deleteWithMissingClass();
 
         // build tree
-        buildMyJ48(instances);
-
-        collapse();
-        if(bPruneTheTree) {
-            prune();
-        }
-    }
-
-    public void buildMyJ48(Instances instances) throws Exception {
         bLeaf = false;
         bEmpty = false;
         ctSons = null;
+        buildMyJ48(instances);
 
+        collapse();
+//        if(bPruneTheTree) {
+//            prune();
+//        }
+    }
+
+    public void buildMyJ48(Instances instances) throws Exception {
         csmLocalModel = selectModel(instances);
         if(csmLocalModel.numSubsets() > 1) {
             Instances[] localInstances = csmLocalModel.split(instances);
@@ -262,10 +231,10 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
             if(errorsOfSubtree >= errorsOfTree - 0.001D) {
                 ctSons = null;
                 bLeaf = true;
-                csmLocalModel = new NoSplit(csmLocalModel.distribution());
+                csmLocalModel = new MyNoSplit(csmLocalModel.distribution());
             } else {
-                for(int i = 0; i < ctSons.length; ++i) {
-                    ctSons[i].collapse();
+                for (MyJ48 ctSon : ctSons) {
+                    ctSon.collapse();
                 }
             }
         }
@@ -286,12 +255,12 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
 
     @Override
     public double classifyInstance(Instance instance) throws Exception {
-        return root.classifyInstance(instance);
+        return 0.D;
     }
 
     @Override
     public double[] distributionForInstance(Instance instance) throws Exception {
-        return root.distributionForInstance(instance, bEnableLaplace);
+        return new double[0];
     }
 
     @Override
@@ -301,29 +270,22 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
 
     @Override
     public String graph() throws Exception {
-        return root.graph();
+        return "Something";
     }
 
     @Override
     public String prefix() throws Exception {
-        return root.prefix();
+        return "Something";
     }
 
     @Override
     public String toSource(String classAttribute) throws Exception {
-        StringBuffer [] source = root.toSource(classAttribute);
-        return "class ".concat(classAttribute).concat( " {\n\n")
-                        .concat("  public static double classify(Object[] i)\n")
-                        .concat("    throws Exception {\n\n")
-                        .concat("    double p = Double.NaN;\n")+ source[0]  // Assignment code
-                        + "    return p;\n"
-                        .concat("  }\n") + source[1]  // Support code
-                        + "}\n";
+        return "Something";
     }
 
     @Override
     public String toSummaryString() {
-        return null;
+        return "Something";
     }
 
     @Override
@@ -336,103 +298,8 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
         return result;
     }
 
-    public boolean isbUnpruned() {
-        return bUnpruned;
-    }
-
-    public void setbUnpruned(boolean bUnpruned) {
-        this.bUnpruned = bUnpruned;
-    }
-
-    public float getfCF() {
-        return fCF;
-    }
-
-    public void setfCF(float fCF) {
-        this.fCF = fCF;
-    }
-
-    public int getiMinInstances() {
-        return iMinInstances;
-    }
-
-    public void setiMinInstances(int iMinInstances) {
-        this.iMinInstances = iMinInstances;
-    }
-
-    public boolean isbReducedErrorPruning() {
-        return bReducedErrorPruning;
-    }
-
-    public void setbReducedErrorPruning(boolean bReducedErrorPruning) {
-        if (bReducedErrorPruning) {
-            bUnpruned = false;
-        }
-        this.bReducedErrorPruning = bReducedErrorPruning;
-    }
-
-    public int getiReducedErrorPruningNumFolds() {
-        return iReducedErrorPruningNumFolds;
-    }
-
-    public void setiReducedErrorPruningNumFolds(int iReducedErrorPruningNumFolds) {
-        this.iReducedErrorPruningNumFolds = iReducedErrorPruningNumFolds;
-    }
-
-    public boolean isbBinarySplitsNominalAttribute() {
-        return bBinarySplitsNominalAttribute;
-    }
-
-    public void setbBinarySplitsNominalAttribute(boolean bBinarySplitsNominalAttribute) {
-        this.bBinarySplitsNominalAttribute = bBinarySplitsNominalAttribute;
-    }
-
-    public int getSeed() {
-       return seedReducedErrorPruning;
-    }
-
-    public void setSeedReducedErrorPruning(int seedReducedErrorPruning) {
-        this.seedReducedErrorPruning = seedReducedErrorPruning;
-    }
-
-    public boolean isbSubtreeRaising() {
-        return bSubtreeRaising;
-    }
-
-    public void setbSubtreeRaising(boolean bSubtreeRaising) {
-        this.bSubtreeRaising = bSubtreeRaising;
-    }
-
-    public boolean isbNoCleanup() {
-        return bNoCleanup;
-    }
-
-    public void setbNoCleanup(boolean bNoCleanup) {
-        this.bNoCleanup = bNoCleanup;
-    }
-
-    public int getSeedReducedErrorPruning() {
-        return seedReducedErrorPruning;
-    }
-
-    public boolean isbEnableLaplace() {
-        return bEnableLaplace;
-    }
-
-    public void setbEnableLaplace(boolean bEnableLaplace) {
-        this.bEnableLaplace = bEnableLaplace;
-    }
-
     public String toString() {
-
-        if (root == null) {
-            return "No classifier built";
-        }
-        if (bUnpruned)
-            return "J48 unpruned tree\n------------------\n" + root.toString();
-        else
-            return "J48 pruned tree\n------------------\n" + root.toString();
+        return "Print Something";
     }
-
 
 }
