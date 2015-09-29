@@ -442,7 +442,6 @@ public class MyID3 extends Classifier implements TechnicalInformationHandler, So
                 }
                 System.out.println(eval.toSummaryString("\nResults Full-Training\n\n", false));
                 // Evaluate model from build classifier (test set)
-
                 // Test Confusion Matrix
                 System.out.println("Confusion Matrix : ");
                 double[][] cmMatrix = eval.confusionMatrix();
