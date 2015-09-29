@@ -23,12 +23,12 @@ public class MyNoSplit extends MyClassifierSplitModel {
 
     @Override
     public String leftSide(Instances data) {
-        return "nosplit ke kiri";
+        return "";
     }
 
     @Override
     public String rightSide(int index, Instances data) {
-        return "nosplit ke kanan";
+        return "";
     }
 
     @Override

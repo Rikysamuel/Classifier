@@ -66,9 +66,83 @@ public class MyC45Split extends MyClassifierSplitModel {
         if (dDistribution.check(iMinInstances)) {
             iNumSubsets = iComplexityIndex;
             dInfoGain = infoGainCrit.splitCritValue(dDistribution, dTotalWeights);
-            dGainRatio = gainRatioCrit.splitCritValue(dDistribution,dTotalWeights, dInfoGain);
+            dGainRatio = gainRatioCrit.splitCritValue(dDistribution, dTotalWeights, dInfoGain);
         }
     }
+
+//    public final double splitCritValue(Distribution bags, double totalNoInst) {
+//        double numerator;
+//        double noUnknown;
+//        double unknownRate;
+//        int i;
+//
+//        noUnknown = totalNoInst-bags.total();
+//        unknownRate = noUnknown/totalNoInst;
+//        numerator = (oldEnt(bags)-newEnt(bags));
+//        numerator = (1-unknownRate)*numerator;
+//
+//        // Splits with no gain are useless.
+//        if (Utils.eq(numerator,0))
+//            return 0;
+//
+//        return numerator/bags.total();
+//    }
+
+//    public final double computeGainRatio(Distribution bags, double totalnoInst, double numerator) {
+//
+//        double denumerator;
+//        double noUnknown;
+//        double unknownRate;
+//        int i;
+//
+//        // Compute split info.
+//        denumerator = splitEnt(bags,totalnoInst);
+//
+//        // Test if split is trivial.
+//        if (Utils.eq(denumerator,0))
+//            return 0;
+//        denumerator = denumerator/totalnoInst;
+//
+//        return numerator/denumerator;
+//    }
+
+//    private final double splitEnt(Distribution bags,double totalnoInst){
+//
+//        double returnValue = 0;
+//        double noUnknown;
+//        int i;
+//
+//        noUnknown = totalnoInst-bags.total();
+//        if (Utils.gr(bags.total(),0)){
+//            for (i=0;i<bags.numBags();i++)
+//                returnValue = returnValue-logFunc(bags.perBag(i));
+//            returnValue = returnValue-logFunc(noUnknown);
+//            returnValue = returnValue+logFunc(totalnoInst);
+//        }
+//        return returnValue;
+//    }
+
+//    public final double oldEnt(Distribution bags) {
+//        double entropy = 0;
+//
+//        for (int j=0;j<bags.numClasses();j++) {
+//            entropy = entropy + logFunc(bags.perClass(j));
+//        }
+//        return logFunc(bags.total()) - entropy;
+//    }
+//
+//    public final double newEnt(Distribution bags) {
+//
+//        double returnValue = 0;
+//        int i,j;
+//
+//        for (i=0;i<bags.numBags();i++){
+//            for (j=0;j<bags.numClasses();j++)
+//                returnValue = returnValue+logFunc(bags.perClassPerBag(i,j));
+//            returnValue = returnValue-logFunc(bags.perBag(i));
+//        }
+//        return -returnValue;
+//    }
 
     public void handleNumericAttribute(Instances data) throws Exception {
         int firstMiss, i, next = 1, last = 0, splitIndex = -1;
@@ -115,7 +189,8 @@ public class MyC45Split extends MyClassifierSplitModel {
 
                 // Check if enough Instances in each subset and compute values for criteria.
                 if (Utils.grOrEq(dDistribution.perBag(0), minSplit) && Utils.grOrEq(dDistribution.perBag(1), minSplit)) {
-                    currentInfoGain = infoGainCrit.splitCritValue(dDistribution, dTotalWeights, defaultEnt);
+                    currentInfoGain = infoGainCrit.
+                            splitCritValue(dDistribution, dTotalWeights, defaultEnt);
                     if (Utils.gr(currentInfoGain, dInfoGain)) {
                         dInfoGain = currentInfoGain;
                         splitIndex = next - 1;
@@ -128,7 +203,7 @@ public class MyC45Split extends MyClassifierSplitModel {
         }
 
         // Was there any useful split?
-        if (iIndex == 0) { // ????????????????????????????????????????????????????????????????????????????????????????
+        if (iIndex == 0) {
             return;
         }
 
@@ -178,7 +253,6 @@ public class MyC45Split extends MyClassifierSplitModel {
 
     @Override
     public String leftSide(Instances data) {
-        System.out.println("iAttIndex: " + iAttIndex + " : " + data.attribute(iAttIndex).name());
         return data.attribute(iAttIndex).name();
     }
 
@@ -233,5 +307,14 @@ public class MyC45Split extends MyClassifierSplitModel {
     @Override
     public String getRevision() {
         return null;
+    }
+
+    public final double logFunc(double num) {
+        if (num < 1e-6) {
+            return 0;
+        }
+        else {
+            return num*Math.log(num)/Math.log(2);
+        }
     }
 }
