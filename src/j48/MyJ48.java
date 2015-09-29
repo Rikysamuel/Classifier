@@ -57,6 +57,7 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
     }
 
     public final MyClassifierSplitModel selectModel(Instances data) {
+        dataInstances = new Instances(data);
         MyC45Split bestModel = null;
         MyNoSplit noSplitModel;
         double averageInfoGain = 0.0D;
@@ -132,7 +133,6 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
         bLeaf = false;
         bEmpty = false;
         ctSons = null;
-        dataInstances = instances;
         buildMyJ48(instances);
 
         collapse();
@@ -352,30 +352,33 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
 
             return text.toString();
         } catch (Exception e) {
+            e.printStackTrace();
             return "Can't print classification tree. asdasdasdasd";
         }
     }
 
     private void dumpTree(int depth, StringBuffer text) throws Exception {
         System.out.println("lewat sini oke, depth: " + depth);
-        int i,j;
-        for (i=0; i<ctSons.length; i++) {
+        for (int i=0; i<ctSons.length; i++) {
             text.append("\n");
 
-            for (j=0;j<depth;j++) {
+            for (int j=0;j<depth;j++) {
                 text.append("|   ");
             }
 
+            System.out.println("sadasdasd");
             text.append(csmLocalModel.leftSide(dataInstances));
-            System.out.println("lewat depth: " + depth);
+            System.out.println("lewat left depth: " + depth);
             text.append(csmLocalModel.rightSide(i, dataInstances));
-            System.out.println("ihsrg");
+            System.out.println("lewat right depth: " + depth);
 
             if (ctSons[i].bLeaf) {
                 text.append(": ");
                 text.append(csmLocalModel.dumpLabel(i, dataInstances));
-            } else
+            } else {
+                System.out.println("else");
                 ctSons[i].dumpTree(depth+1, text);
+            }
         }
     }
 

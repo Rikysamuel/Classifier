@@ -13,8 +13,7 @@ import java.util.Enumeration;
  * Created by rikysamuel on 9/28/2015.
  */
 public class MyC45Split extends MyClassifierSplitModel {
-
-
+    private static final long serialVersionUID = 3064079330067903161L;
     public int iComplexityIndex;
     public int iAttIndex;
     public int iMinInstances;
