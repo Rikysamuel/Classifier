@@ -13,7 +13,6 @@ import java.util.Enumeration;
  */
 public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matchable, Sourcable, WeightedInstancesHandler, Summarizable, AdditionalMeasureProducer, TechnicalInformationHandler {
 
-    private int testI;
     private boolean bEmpty;
     private boolean bLeaf;
     private boolean bPruneTree = true;
@@ -22,8 +21,9 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
     private Instances dataInstances;
     private float dConfFact = 0.25f;
 
-    public MyJ48(boolean bPruneTree) {
+    public MyJ48(boolean bPruneTree, float dConfFact) {
         this.bPruneTree = bPruneTree;
+        this.dConfFact = dConfFact;
     }
 
     @Override
@@ -93,7 +93,6 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
                     for(i = 0; i < data.numAttributes(); ++i) {
                         if(i != data.classIndex() && currentModel[i].checkModel() && currentModel[i].dInfoGain >= averageInfoGain - 0.001D && Utils.gr(currentModel[i].dGainRatio, minResult)) {
                             bestModel = currentModel[i];
-                            testI = i;
                             minResult = currentModel[i].dGainRatio;
                         }
                     }
@@ -153,7 +152,7 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
     }
 
     public MyJ48 getNewTree(Instances data) throws Exception {
-        MyJ48 newTree = new MyJ48(bPruneTree);
+        MyJ48 newTree = new MyJ48(bPruneTree, dConfFact);
         newTree.buildMyJ48(data);
 
         return newTree;
@@ -164,7 +163,9 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
         double dErrTree;
 
         if (!bLeaf){
-            for (MyJ48 ctSon : ctSons) ctSon.prune();
+            for (MyJ48 ctSon : ctSons) {
+                ctSon.prune();
+            }
 
             // count error as leaf and tree
             dErrLeaf = getErrorInLeaf(csmLocalModel.dDistribution);
@@ -174,7 +175,6 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
                 ctSons = null;
                 bLeaf = true;
                 csmLocalModel = new MyNoSplit(csmLocalModel.dDistribution);
-                return;
             }
         }
     }

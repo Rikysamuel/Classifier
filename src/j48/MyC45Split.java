@@ -237,15 +237,12 @@ public class MyC45Split extends MyClassifierSplitModel {
 
         text = new StringBuffer();
         if (data.attribute(iAttIndex).isNominal())
-            text.append(" = "+
-                    data.attribute(iAttIndex).value(index));
+            text.append(" = ").append(data.attribute(iAttIndex).value(index));
         else
         if (index == 0)
-            text.append(" <= "+
-                    Utils.doubleToString(dSplitValue,6));
+            text.append(" <= ").append(Utils.doubleToString(dSplitValue, 6));
         else
-            text.append(" > "+
-                    Utils.doubleToString(dSplitValue,6));
+            text.append(" > ").append(Utils.doubleToString(dSplitValue, 6));
         return text.toString();
     }
 

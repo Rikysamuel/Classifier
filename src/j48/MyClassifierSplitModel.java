@@ -57,18 +57,6 @@ public abstract class MyClassifierSplitModel implements Cloneable, Serializable,
         return text.toString();
     }
 
-    public final String dumpModel(Instances data) throws Exception {
-        StringBuffer text;
-        int i;
-
-        text = new StringBuffer();
-        for (i=0;i<iNumSubsets;i++) {
-            text.append(leftSide(data)).append(rightSide(i, data)).append(": ");
-            text.append(dumpLabel(i, data)).append("\n");
-        }
-        return text.toString();
-    }
-
     public final Instances [] split(Instances data) throws Exception {
         Instances [] instances = new Instances [iNumSubsets];
         double [] weights;

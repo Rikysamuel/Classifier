@@ -27,21 +27,30 @@ import weka.core.SerializationHelper;
  * @author rikysamuel
  */
 public class Util {
-    
+
+    private static float confidenceFactor = 0.25f;
     private static Instances data;
     private static Classifier classifier;
 
     public static Instances getData() {
         return data;
     }
-    
+
+    public static float getConfidenceFactor() {
+        return confidenceFactor;
+    }
+
+    public static void setConfidenceFactor(float confidenceFactor) {
+        Util.confidenceFactor = confidenceFactor;
+    }
+
     public static Classifier getClassifier() {
         return classifier;
     }
     
     /**
      * load dataset from ARFF format
-     * @param filename 
+     * @param filename file path
      */
     public static void loadARFF(String filename) {
         FileReader file = null;
@@ -52,8 +61,6 @@ public class Util {
             }
             // setting class attribute
             data.setClassIndex(data.numAttributes() - 1);
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
             Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
@@ -86,7 +93,7 @@ public class Util {
     
     /**
      * remove a certain attribute from the dataset
-     * @param id 
+     * @param id attribute id to remove
      */
     public static void removeAttribute(int id) {
         data.deleteAttributeAt(id);
@@ -94,8 +101,8 @@ public class Util {
     
     /**
      * resample the instances in dataset
-     * @param seed
-     * @return 
+     * @param seed random seed
+     * @return resampled instances
      */
     public static Instances resample(int seed) {
         return data.resample(new Random(seed));
@@ -103,24 +110,24 @@ public class Util {
 
     /**
      * apply all filter to build the classifier
-     * @param train
-     * @param Classifier
+     * @param train data training
+     * @param Classifier model
      */
     public static void buildModel(String Classifier, Instances train) {
         try {
             // Membangun model dan melakukan test
             switch (Classifier.toLowerCase()) {
                 case "naivebayes" :
-                    classifier = (Classifier) new NaiveBayes();
+                    classifier = new NaiveBayes();
                     break;
                 case "j48-prune" :
-                    classifier = (Classifier) new MyJ48(true);
+                    classifier = new MyJ48(true, confidenceFactor);
                     break;
                 case "j48-unprune" :
-                    classifier = (Classifier) new MyJ48(false);
+                    classifier = new MyJ48(false, confidenceFactor);
                     break;
                 case "id3" :
-                    classifier = (Classifier) new MyID3();
+                    classifier = new MyID3();
                 default :
                     break;
             }
@@ -132,7 +139,7 @@ public class Util {
     
     /**
      * save classifier to a specific location
-     * @param filePath 
+     * @param filePath  filepath name
      */
     public static void saveClassifier(String filePath) {
         try {
@@ -144,7 +151,7 @@ public class Util {
     
     /**
      * load classifier from .model file
-     * @param modelPath
+     * @param modelPath model file path
      */
     public static void loadClassifer(String modelPath) {
         try {
@@ -171,7 +178,7 @@ public class Util {
     
     /**
      * show learning statistic result by full-training method
-     * @param data 
+     * @param data training data
      */
     public static void FullSchema(Instances data) {
         try {
@@ -185,8 +192,8 @@ public class Util {
 
     /**
      * show learning statistic result by using test sets
-     * @param testPath
-     * @param typeTestFile
+     * @param testPath test path file
+     * @param typeTestFile test file
      */
     public static void TestSchema(String testPath, String typeTestFile) {
         Instances testsets = null;
@@ -200,8 +207,6 @@ public class Util {
                 }
                 // setting class attribute
                 testsets.setClassIndex(data.numAttributes() - 1);
-            } catch (FileNotFoundException ex) {
-                Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
             } catch (IOException ex) {
                 Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
             } finally {
@@ -225,6 +230,7 @@ public class Util {
                 Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
+
         // Start evaluate model using instances test and print results
         try {
             Evaluation eval = new Evaluation(Util.getData());
@@ -237,10 +243,10 @@ public class Util {
     
     /**
      * show learning statistic result by percentage split
-     * @param data
-     * @param attributeIndices
-     * @param trainPercent
-     * @param Classifier 
+     * @param data training data
+     * @param attributeIndices attribute number to train
+     * @param trainPercent percentage of the training data
+     * @param Classifier model
      */
     public static void PercentageSplit(Instances data, String attributeIndices, double trainPercent, String Classifier) {
         try {
@@ -260,16 +266,16 @@ public class Util {
 
             switch (Classifier.toLowerCase()) {
                 case "naivebayes" :
-                    classifier = (Classifier) new NaiveBayes();
+                    classifier = new NaiveBayes();
                     break;
                 case "j48-prune" :
-                    classifier = (Classifier) new MyJ48(true);
+                    classifier = new MyJ48(true, 0.25f);
                     break;
                 case "j48-unprune" :
-                    classifier = (Classifier) new MyJ48(false);
+                    classifier = new MyJ48(false, 0f);
                     break;
                 case "id3" :
-                    classifier = (Classifier) new MyID3();
+                    classifier = new MyID3();
                     break;
                 default :
                     break;
@@ -304,8 +310,8 @@ public class Util {
     
     /**
      * Classify test set using pre-build model
-     * @param model
-     * @param test
+     * @param model model pathfile
+     * @param test test file
      */
     public static void doClassify(Classifier model, Instances test) {
         test.setClassIndex(test.numAttributes() - 1);
