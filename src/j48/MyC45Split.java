@@ -22,8 +22,8 @@ public class MyC45Split extends MyClassifierSplitModel {
     public double dGainRatio;
     public double dTotalWeights;
     public int iIndex;
-    public static InfoGainSplitCrit infoGainCrit = new InfoGainSplitCrit();
-    public static GainRatioSplitCrit gainRatioCrit = new GainRatioSplitCrit();
+//    public static InfoGainSplitCrit infoGainCrit = new InfoGainSplitCrit();
+//    public static GainRatioSplitCrit gainRatioCrit = new GainRatioSplitCrit();
 
     public MyC45Split(int attIndex, int minNoObj, double sumOfWeights) {
         iAttIndex = attIndex;
@@ -65,84 +65,98 @@ public class MyC45Split extends MyClassifierSplitModel {
 
         if (dDistribution.check(iMinInstances)) {
             iNumSubsets = iComplexityIndex;
-            dInfoGain = infoGainCrit.splitCritValue(dDistribution, dTotalWeights);
-            dGainRatio = gainRatioCrit.splitCritValue(dDistribution, dTotalWeights, dInfoGain);
+            dInfoGain = InfosplitCritValue(dDistribution, dTotalWeights);
+            dGainRatio = RatiosplitCritValue(dDistribution, dTotalWeights, dInfoGain);
         }
     }
 
-//    public final double splitCritValue(Distribution bags, double totalNoInst) {
-//        double numerator;
-//        double noUnknown;
-//        double unknownRate;
-//        int i;
-//
-//        noUnknown = totalNoInst-bags.total();
-//        unknownRate = noUnknown/totalNoInst;
-//        numerator = (oldEnt(bags)-newEnt(bags));
-//        numerator = (1-unknownRate)*numerator;
-//
-//        // Splits with no gain are useless.
-//        if (Utils.eq(numerator,0))
-//            return 0;
-//
-//        return numerator/bags.total();
-//    }
+    public final double InfosplitCritValue(Distribution bags, double totalNoInst) {
+        double numerator;
+        double noUnknown;
+        double unknownRate;
 
-//    public final double computeGainRatio(Distribution bags, double totalnoInst, double numerator) {
-//
-//        double denumerator;
-//        double noUnknown;
-//        double unknownRate;
-//        int i;
-//
-//        // Compute split info.
-//        denumerator = splitEnt(bags,totalnoInst);
-//
-//        // Test if split is trivial.
-//        if (Utils.eq(denumerator,0))
-//            return 0;
-//        denumerator = denumerator/totalnoInst;
-//
-//        return numerator/denumerator;
-//    }
+        noUnknown = totalNoInst-bags.total();
+        unknownRate = noUnknown/totalNoInst;
+        numerator = (oldEnt(bags)-newEnt(bags));
+        numerator = (1-unknownRate)*numerator;
 
-//    private final double splitEnt(Distribution bags,double totalnoInst){
-//
-//        double returnValue = 0;
-//        double noUnknown;
-//        int i;
-//
-//        noUnknown = totalnoInst-bags.total();
-//        if (Utils.gr(bags.total(),0)){
-//            for (i=0;i<bags.numBags();i++)
-//                returnValue = returnValue-logFunc(bags.perBag(i));
-//            returnValue = returnValue-logFunc(noUnknown);
-//            returnValue = returnValue+logFunc(totalnoInst);
-//        }
-//        return returnValue;
-//    }
+        // Splits with no gain are useless.
+        if (Utils.eq(numerator,0))
+            return 0;
 
-//    public final double oldEnt(Distribution bags) {
-//        double entropy = 0;
-//
-//        for (int j=0;j<bags.numClasses();j++) {
-//            entropy = entropy + logFunc(bags.perClass(j));
-//        }
-//        return logFunc(bags.total()) - entropy;
-//    }
-//
-//    public final double newEnt(Distribution bags) {
-//
-//        double returnValue = 0;
-//        int i,j;
-//
-//        for (i=0;i<bags.numBags();i++){
-//            for (j=0;j<bags.numClasses();j++)
-//                returnValue = returnValue+logFunc(bags.perClassPerBag(i,j));
-//            returnValue = returnValue-logFunc(bags.perBag(i));
-//        }
-//        return -returnValue;
-//    }
+        return numerator/bags.total();
+    }
+
+    public final double InfosplitCritValue2(Distribution bags,double totalNoInst, double oldEnt) {
+        double numerator;
+        double noUnknown;
+        double unknownRate;
+
+        noUnknown = totalNoInst-bags.total();
+        unknownRate = noUnknown/totalNoInst;
+        numerator = (oldEnt-newEnt(bags));
+        numerator = (1-unknownRate)*numerator;
+
+        // Splits with no gain are useless.
+        if (Utils.eq(numerator,0))
+            return 0;
+
+        return numerator/bags.total();
+    }
+
+    public final double RatiosplitCritValue(Distribution bags, double totalnoInst, double numerator) {
+
+        double denumerator;
+        int i;
+
+        // Compute split info.
+        denumerator = splitEnt(bags,totalnoInst);
+
+        // Test if split is trivial.
+        if (Utils.eq(denumerator,0))
+            return 0;
+        denumerator = denumerator/totalnoInst;
+
+        return numerator/denumerator;
+    }
+
+    private final double splitEnt(Distribution bags,double totalnoInst){
+
+        double returnValue = 0;
+        double noUnknown;
+        int i;
+
+        noUnknown = totalnoInst-bags.total();
+        if (Utils.gr(bags.total(),0)){
+            for (i=0;i<bags.numBags();i++)
+                returnValue = returnValue-logFunc(bags.perBag(i));
+            returnValue = returnValue-logFunc(noUnknown);
+            returnValue = returnValue+logFunc(totalnoInst);
+        }
+        return returnValue;
+    }
+
+    public final double oldEnt(Distribution bags) {
+        double entropy = 0;
+
+        for (int j=0;j<bags.numClasses();j++) {
+            entropy = entropy + logFunc(bags.perClass(j));
+        }
+        return logFunc(bags.total()) - entropy;
+    }
+
+    public final double newEnt(Distribution bags) {
+
+        double returnValue = 0;
+        int i,j;
+
+        for (i=0;i<bags.numBags();i++){
+            for (j=0;j<bags.numClasses();j++)
+                returnValue = returnValue+logFunc(bags.perClassPerBag(i,j));
+            returnValue = returnValue-logFunc(bags.perBag(i));
+        }
+        return -returnValue;
+    }
 
     public void handleNumericAttribute(Instances data) throws Exception {
         int firstMiss, i, next = 1, last = 0, splitIndex = -1;
@@ -179,7 +193,7 @@ public class MyC45Split extends MyClassifierSplitModel {
         }
 
         // Compute values of criteria for all possible split indices.
-        defaultEnt = infoGainCrit.oldEnt(dDistribution);
+        defaultEnt = oldEnt(dDistribution);
         while (next < firstMiss) {
 
             if (data.instance(next - 1).value(iAttIndex) + 1e-5 < data.instance(next).value(iAttIndex)) {
@@ -189,8 +203,7 @@ public class MyC45Split extends MyClassifierSplitModel {
 
                 // Check if enough Instances in each subset and compute values for criteria.
                 if (Utils.grOrEq(dDistribution.perBag(0), minSplit) && Utils.grOrEq(dDistribution.perBag(1), minSplit)) {
-                    currentInfoGain = infoGainCrit.
-                            splitCritValue(dDistribution, dTotalWeights, defaultEnt);
+                    currentInfoGain = InfosplitCritValue2(dDistribution, dTotalWeights, defaultEnt);
                     if (Utils.gr(currentInfoGain, dInfoGain)) {
                         dInfoGain = currentInfoGain;
                         splitIndex = next - 1;
@@ -228,7 +241,7 @@ public class MyC45Split extends MyClassifierSplitModel {
         dDistribution.addRange(1, data, splitIndex+1, firstMiss);
 
         // Compute modified gain ratio for best split.
-        dGainRatio = gainRatioCrit.splitCritValue(dDistribution, dTotalWeights, dInfoGain);
+        dGainRatio = RatiosplitCritValue(dDistribution, dTotalWeights, dInfoGain);
     }
 
     public void setSplitPoint(Instances data) {
