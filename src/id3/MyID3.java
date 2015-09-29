@@ -5,15 +5,10 @@
  */
 package id3;
 
-import general.Util;
-import sun.awt.SunHints;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.Sourcable;
-import weka.classifiers.trees.Id3;
 import weka.core.*;
-import weka.core.pmml.FieldMetaInfo;
-
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -120,20 +115,22 @@ public class MyID3 extends Classifier implements TechnicalInformationHandler, So
             currentAttribute = instances.attribute(indexMaxInfoGain);
             // Delete current attribute from remaining attribute
             ArrayList<Attribute> remainingAttributes = attributes;
-            int indexAttributeDeleted = 0;
-            for (int i=0; i<remainingAttributes.size(); i++) {
-                if (remainingAttributes.get(i).index() == currentAttribute.index()) {
-                    indexAttributeDeleted = i;
+            if (!remainingAttributes.isEmpty()) {
+                int indexAttributeDeleted = 0;
+                for (int i = 0; i < remainingAttributes.size(); i++) {
+                    if (remainingAttributes.get(i).index() == currentAttribute.index()) {
+                        indexAttributeDeleted = i;
+                    }
                 }
+                remainingAttributes.remove(indexAttributeDeleted);
             }
-            remainingAttributes.remove(indexAttributeDeleted);
             // Split instances based on currentAttribute (create branch new node)
             Instances[] instancesSplitBasedAttribute = splitData(instances,currentAttribute);
             subTree = new MyID3[currentAttribute.numValues()];
             for (int i=0; i<currentAttribute.numValues(); i++) {
                 if (instancesSplitBasedAttribute[i].numInstances() == 0) {
-                  /*  double[] currentClassDistribution = classDistribution(instances);
-                    // Labelling process at node
+                    // Handle empty examples at nodes
+                    double[] currentClassDistribution = classDistribution(instances);
                     classLabel = 0.0;
                     double counterDistribution = 0.0;
                     for (int j=0; j<currentClassDistribution.length; j++) {
@@ -141,7 +138,7 @@ public class MyID3 extends Classifier implements TechnicalInformationHandler, So
                             classLabel = j;
                         }
                     }
-                    classAttribute = instances.classAttribute(); */
+                    classAttribute = instances.classAttribute();
                 } else {
                     subTree[i] = new MyID3();
                     subTree[i].buildMyID3(instancesSplitBasedAttribute[i],remainingAttributes);
