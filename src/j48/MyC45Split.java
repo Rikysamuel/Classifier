@@ -1,5 +1,6 @@
 package j48;
 
+import com.sun.javafx.event.EventDispatchTreeImpl;
 import weka.classifiers.trees.j48.Distribution;
 import weka.classifiers.trees.j48.GainRatioSplitCrit;
 import weka.classifiers.trees.j48.InfoGainSplitCrit;
@@ -22,8 +23,8 @@ public class MyC45Split extends MyClassifierSplitModel {
     public double dGainRatio;
     public double dTotalWeights;
     public int iIndex;
-    public static InfoGainSplitCrit infoGainCrit = new InfoGainSplitCrit();
-    public static GainRatioSplitCrit gainRatioCrit = new GainRatioSplitCrit();
+//    public static InfoGainSplitCrit infoGainCrit = new InfoGainSplitCrit();
+//    public static GainRatioSplitCrit gainRatioCrit = new GainRatioSplitCrit();
 
     public MyC45Split(int attIndex, int minNoObj, double sumOfWeights) {
         iAttIndex = attIndex;
@@ -65,9 +66,64 @@ public class MyC45Split extends MyClassifierSplitModel {
 
         if (dDistribution.check(iMinInstances)) {
             iNumSubsets = iComplexityIndex;
-            dInfoGain = infoGainCrit.splitCritValue(dDistribution, dTotalWeights);
-            dGainRatio = gainRatioCrit.splitCritValue(dDistribution,dTotalWeights, dInfoGain);
+//            dInfoGain = InfosplitCritValue(dDistribution, dTotalWeights);
+//            dGainRatio = RatiosplitCritValue(dDistribution, dTotalWeights, dInfoGain);
+            dGainRatio = gainRatio(dDistribution, dTotalWeights, oldEnt(dDistribution));
         }
+    }
+
+    public double gainRatio2(Distribution dist, double totalInst, double dInfoGain){
+        double res;
+        double numUnknown;
+        double unknownRate;
+
+        res = oldEnt(dist) - dInfoGain;
+        numUnknown = totalInst-dist.total();
+        unknownRate = numUnknown/totalInst;
+        res = (1-unknownRate)*res;
+
+        if (Utils.eq(res,0))
+            return 0;
+
+        return res/dist.total();
+    }
+
+    public final double gainRatio(Distribution dist,double totalInst, double oldEnt) {
+        double res;
+        double numUnknown;
+        double unknownRate;
+
+        numUnknown = totalInst-dist.total();
+        unknownRate = numUnknown/totalInst;
+        res = (oldEnt-newEnt(dist));
+        res = (1-unknownRate)*res;
+
+        if (Utils.eq(res,0))
+            return 0;
+
+        return res/dist.total();
+    }
+
+    public final double oldEnt(Distribution bags) {
+        double entropy = 0;
+
+        for (int j=0;j<bags.numClasses();j++) {
+            entropy = entropy + logFunc(bags.perClass(j));
+        }
+        return logFunc(bags.total()) - entropy;
+    }
+
+    public final double newEnt(Distribution bags) {
+
+        double returnValue = 0;
+        int i,j;
+
+        for (i=0;i<bags.numBags();i++){
+            for (j=0;j<bags.numClasses();j++)
+                returnValue = returnValue+logFunc(bags.perClassPerBag(i,j));
+            returnValue = returnValue-logFunc(bags.perBag(i));
+        }
+        return -returnValue;
     }
 
     public void handleNumericAttribute(Instances data) throws Exception {
@@ -105,7 +161,7 @@ public class MyC45Split extends MyClassifierSplitModel {
         }
 
         // Compute values of criteria for all possible split indices.
-        defaultEnt = infoGainCrit.oldEnt(dDistribution);
+        defaultEnt = oldEnt(dDistribution);
         while (next < firstMiss) {
 
             if (data.instance(next - 1).value(iAttIndex) + 1e-5 < data.instance(next).value(iAttIndex)) {
@@ -115,7 +171,7 @@ public class MyC45Split extends MyClassifierSplitModel {
 
                 // Check if enough Instances in each subset and compute values for criteria.
                 if (Utils.grOrEq(dDistribution.perBag(0), minSplit) && Utils.grOrEq(dDistribution.perBag(1), minSplit)) {
-                    currentInfoGain = infoGainCrit.splitCritValue(dDistribution, dTotalWeights, defaultEnt);
+                    currentInfoGain = gainRatio(dDistribution, dTotalWeights, defaultEnt);
                     if (Utils.gr(currentInfoGain, dInfoGain)) {
                         dInfoGain = currentInfoGain;
                         splitIndex = next - 1;
@@ -128,7 +184,7 @@ public class MyC45Split extends MyClassifierSplitModel {
         }
 
         // Was there any useful split?
-        if (iIndex == 0) { // ????????????????????????????????????????????????????????????????????????????????????????
+        if (iIndex == 0) {
             return;
         }
 
@@ -153,8 +209,9 @@ public class MyC45Split extends MyClassifierSplitModel {
         dDistribution.addRange(1, data, splitIndex+1, firstMiss);
 
         // Compute modified gain ratio for best split.
-        dGainRatio = gainRatioCrit.splitCritValue(dDistribution, dTotalWeights, dInfoGain);
+        dGainRatio = gainRatio2(dDistribution, dTotalWeights, dInfoGain);
     }
+
 
     public void setSplitPoint(Instances data) {
         double newSplitPoint = -Double.MAX_VALUE;
@@ -178,7 +235,6 @@ public class MyC45Split extends MyClassifierSplitModel {
 
     @Override
     public String leftSide(Instances data) {
-        System.out.println("iAttIndex: " + iAttIndex + " : " + data.attribute(iAttIndex).name());
         return data.attribute(iAttIndex).name();
     }
 
@@ -233,5 +289,14 @@ public class MyC45Split extends MyClassifierSplitModel {
     @Override
     public String getRevision() {
         return null;
+    }
+
+    public final double logFunc(double num) {
+        if (num < 1e-6) {
+            return 0;
+        }
+        else {
+            return num*Math.log(num)/Math.log(2);
+        }
     }
 }

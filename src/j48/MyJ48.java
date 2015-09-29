@@ -22,6 +22,10 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
     private Instances dataInstances;
     private float dConfFact = 0.25f;
 
+    public MyJ48(boolean bPruneTree) {
+        this.bPruneTree = bPruneTree;
+    }
+
     @Override
     public Capabilities getCapabilities() {
         Capabilities result = super.getCapabilities();
@@ -95,19 +99,16 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
                     }
 
                     if(Utils.eq(minResult, 0.0D)) {
-                        System.out.println("no split, Model: " + testI);
                         return noSplitModel;
                     } else {
                         if (bestModel!= null) {
                             bestModel.dDistribution.addInstWithUnknown(data, bestModel.iAttIndex);
                             bestModel.setSplitPoint(data);
                         }
-                        System.out.println("split, best-model: " + testI);
                         return bestModel;
                     }
                 }
             } else {
-                System.out.println("no split, " + checkDistribution.maxClass());
                 return noSplitModel;
             }
         } catch (Exception e) {
@@ -152,7 +153,7 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
     }
 
     public MyJ48 getNewTree(Instances data) throws Exception {
-        MyJ48 newTree = new MyJ48();
+        MyJ48 newTree = new MyJ48(bPruneTree);
         newTree.buildMyJ48(data);
 
         return newTree;
@@ -366,14 +367,13 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
     public String toString() {
         try {
             StringBuffer text = new StringBuffer();
+            text.append("J48 prune=").append(bPruneTree).append("\n\n");
 
             if (bLeaf) {
                 text.append(": ");
                 text.append(csmLocalModel.dumpLabel(0, dataInstances));
             }else {
-                System.out.println("lewat 1");
                 dumpTree(0, text);
-                System.out.println("lewat 2");
             }
             text.append("\n\nNumber of Leaves  : \t"+numLeaves()+"\n");
             text.append("\nSize of the tree : \t"+numNodes()+"\n");
@@ -381,12 +381,11 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
             return text.toString();
         } catch (Exception e) {
             e.printStackTrace();
-            return "Can't print classification tree. asdasdasdasd";
+            return "Can't print classification tree.";
         }
     }
 
     private void dumpTree(int depth, StringBuffer text) throws Exception {
-        System.out.println("lewat sini oke, depth: " + depth);
         for (int i=0; i<ctSons.length; i++) {
             text.append("\n");
 
@@ -394,17 +393,13 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
                 text.append("|   ");
             }
 
-            System.out.println("sadasdasd");
             text.append(csmLocalModel.leftSide(dataInstances));
-            System.out.println("lewat left depth: " + depth);
             text.append(csmLocalModel.rightSide(i, dataInstances));
-            System.out.println("lewat right depth: " + depth);
 
             if (ctSons[i].bLeaf) {
                 text.append(": ");
                 text.append(csmLocalModel.dumpLabel(i, dataInstances));
             } else {
-                System.out.println("else");
                 ctSons[i].dumpTree(depth+1, text);
             }
         }

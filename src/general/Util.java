@@ -113,8 +113,11 @@ public class Util {
                 case "naivebayes" :
                     classifier = (Classifier) new NaiveBayes();
                     break;
-                case "j48" :
-                    classifier = (Classifier) new MyJ48();
+                case "j48-prune" :
+                    classifier = (Classifier) new MyJ48(true);
+                    break;
+                case "j48-unprune" :
+                    classifier = (Classifier) new MyJ48(false);
                     break;
                 case "id3" :
                     classifier = (Classifier) new MyID3();
@@ -259,8 +262,11 @@ public class Util {
                 case "naivebayes" :
                     classifier = (Classifier) new NaiveBayes();
                     break;
-                case "j48" :
-                    classifier = (Classifier) new MyJ48();
+                case "j48-prune" :
+                    classifier = (Classifier) new MyJ48(true);
+                    break;
+                case "j48-unprune" :
+                    classifier = (Classifier) new MyJ48(false);
                     break;
                 case "id3" :
                     classifier = (Classifier) new MyID3();
