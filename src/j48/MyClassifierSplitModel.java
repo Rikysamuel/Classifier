@@ -1,14 +1,20 @@
 package j48;
 
 import weka.classifiers.trees.j48.Distribution;
-import weka.core.*;
+import weka.core.Instance;
+import weka.core.Instances;
+import weka.core.RevisionHandler;
+import weka.core.Utils;
+
+import java.io.Serializable;
 
 /**
  * Created by rikysamuel on 9/29/2015.
  */
-public abstract class MyClassifierSplitModel implements Cloneable, RevisionHandler {
+public abstract class MyClassifierSplitModel implements Cloneable, Serializable, RevisionHandler {
     public Distribution dDistribution;
     public int iNumSubsets;
+    private static final long serialVersionUID = 4280730118393457357L;
 
     public abstract void buildClassifier(Instances instances) throws Exception;
 

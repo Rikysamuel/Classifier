@@ -327,13 +327,13 @@ public class Util {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        Util.loadARFF("D:\\Weka-3-6\\data\\weather.nominal.arff");
-        Util.buildModel("id3", Util.getData());
+        Util.loadARFF("C:\\Program Files\\Weka-3-7\\data\\weather.nominal.arff");
+        Util.buildModel("j48", Util.getData());
         System.out.println(Util.getClassifier());
 
-         Util.PercentageSplit(Util.getData(), "1-4", 66, "id3");
-        // Util.FullSchema(Util.getData());
-       // Util.FoldSchema(Util.getData(), 5);
+//         Util.PercentageSplit(Util.getData(), "1-4", 66, "id3");
+        Util.FullSchema(Util.getData());
+//       Util.FoldSchema(Util.getData(), 10);
         //Util.TestSchema("D:\\test.arff","arff");
 
        // Util.loadARFF("D:\\test.arff");

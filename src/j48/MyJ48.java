@@ -3,18 +3,8 @@ package j48;
 import weka.classifiers.Classifier;
 import weka.classifiers.Sourcable;
 import weka.classifiers.trees.j48.Distribution;
-import weka.core.AdditionalMeasureProducer;
-import weka.core.Capabilities;
-import weka.core.Drawable;
-import weka.core.Instance;
-import weka.core.Instances;
-import weka.core.Matchable;
-import weka.core.OptionHandler;
-import weka.core.Summarizable;
-import weka.core.TechnicalInformation;
-import weka.core.TechnicalInformationHandler;
-import weka.core.Utils;
-import weka.core.WeightedInstancesHandler;
+import weka.core.*;
+
 import java.util.Enumeration;
 
 /**
@@ -26,9 +16,11 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
     private int testI;
     private boolean bEmpty;
     private boolean bLeaf;
+    private boolean bPruneTree = true;
     private MyClassifierSplitModel csmLocalModel;
     private MyJ48[] ctSons;
     private Instances dataInstances;
+    private float dConfFact = 0.25f;
 
     @Override
     public Capabilities getCapabilities() {
@@ -136,9 +128,9 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
         buildMyJ48(instances);
 
         collapse();
-//        if(bPruneTheTree) {
-//            prune();
-//        }
+        if(bPruneTree) {
+            prune();
+        }
     }
 
     public void buildMyJ48(Instances instances) throws Exception {
@@ -167,59 +159,89 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
     }
 
     public void prune() {
-        /*
-        double errorsLargestBranch;
-        double errorsLeaf;
-        double errorsTree;
-        int indexOfLargestBranch;
-        C45PruneableClassifierTree largestBranch;
-        int i;
+        double dErrLeaf;
+        double dErrTree;
 
         if (!bLeaf){
-            // Prune all subtrees.
-            for (i=0;i<ctSons.length;i++)
+            for (int i=0;i<ctSons.length;i++)
                 ctSons[i].prune();
 
-            // Compute error for largest branch
-            indexOfLargestBranch = csmLocalModel.distribution().maxBag();
-            if (bSubtreeRaising) {
-                errorsLargestBranch = ctSons[indexOfLargestBranch].getEstimatedErrorsForBranch((Instances) m_train);
-            } else {
-                errorsLargestBranch = Double.MAX_VALUE;
-            }
+            // count error as leaf and tree
+            dErrLeaf = getErrorInLeaf(csmLocalModel.dDistribution);
+            dErrTree = getErrorInTree();
 
-            // Compute error if this Tree would be leaf
-            errorsLeaf =
-                    getEstimatedErrorsForDistribution(localModel().distribution());
-
-            // Compute error for the whole subtree
-            errorsTree = getEstimatedErrors();
-
-            // Decide if leaf is best choice.
-            if (Utils.smOrEq(errorsLeaf,errorsTree+0.1) &&
-                    Utils.smOrEq(errorsLeaf,errorsLargestBranch+0.1)){
-
-                // Free son Trees
-                m_sons = null;
-                m_isLeaf = true;
-
-                // Get NoSplit Model for node.
-                m_localModel = new NoSplit(localModel().distribution());
+            if (dErrLeaf<=dErrTree+0.1){
+                ctSons = null;
+                bLeaf = true;
+                csmLocalModel = new MyNoSplit(csmLocalModel.dDistribution);
                 return;
             }
-
-            // Decide if largest branch is better choice
-            // than whole subtree.
-            if (Utils.smOrEq(errorsLargestBranch,errorsTree+0.1)){
-                largestBranch = son(indexOfLargestBranch);
-                m_sons = largestBranch.m_sons;
-                m_localModel = largestBranch.localModel();
-                m_isLeaf = largestBranch.m_isLeaf;
-                newDistribution(m_train);
-                prune();
-            }
         }
-        */
+    }
+
+    public double getErrorInTree(){
+        double err = 0;
+        if (bLeaf)
+            return getErrorInLeaf(csmLocalModel.dDistribution);
+        else{
+            for (int i=0;i<ctSons.length;i++) {
+                err = err + ctSons[i].getErrorInTree();
+            }
+            return err;
+        }
+    }
+
+    public double getErrorInLeaf(Distribution dist){
+        if (dist.total()==0)
+            return 0;
+        else
+            return dist.numIncorrect()+addErrs(dist.total(),dist.numIncorrect(),dConfFact);
+    }
+
+    public double addErrs(double N, double e, float CF){
+
+        // Ignore stupid values for CF
+        if (CF > 0.5) {
+            System.err.println("WARNING: confidence value for pruning " +
+                    " too high. Error estimate not modified.");
+            return 0;
+        }
+
+        // Check for extreme cases at the low end because the
+        // normal approximation won't work
+        if (e < 1) {
+
+            // Base case (i.e. e == 0) from documenta Geigy Scientific
+            // Tables, 6th edition, page 185
+            double base = N * (1 - Math.pow(CF, 1 / N));
+            if (e == 0) {
+                return base;
+            }
+
+            // Use linear interpolation between 0 and 1 like C4.5 does
+            return base + e * (addErrs(N, 1, CF) - base);
+        }
+
+        // Use linear interpolation at the high end (i.e. between N - 0.5
+        // and N) because of the continuity correction
+        if (e + 0.5 >= N) {
+
+            // Make sure that we never return anything smaller than zero
+            return Math.max(N - e, 0);
+        }
+
+        // Get z-score corresponding to CF
+        double z = Statistics.normalInverse(1 - CF);
+
+        // Compute upper limit of confidence interval
+        double  f = (e + 0.5) / N;
+        double r = (f + (z * z) / (2 * N) +
+                z * Math.sqrt((f / N) -
+                        (f * f / N) +
+                        (z * z / (4 * N * N)))) /
+                (1 + (z * z) / N);
+
+        return (r * N) - e;
     }
 
     public void collapse() {
@@ -297,7 +319,13 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
 
     @Override
     public double[] distributionForInstance(Instance instance) throws Exception {
-        return new double[0];
+        double [] doubles = new double[instance.numClasses()];
+
+        for (int i = 0; i < doubles.length; i++) {
+            doubles[i] = getProbs(i, instance, 1);
+        }
+
+        return doubles;
     }
 
     @Override

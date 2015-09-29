@@ -13,7 +13,7 @@ import java.util.Enumeration;
  * Created by rikysamuel on 9/28/2015.
  */
 public class MyC45Split extends MyClassifierSplitModel {
-    private static final long serialVersionUID = 3064079330067903161L;
+    private static final long serialVersionUID = 3064079330067913191L;
     public int iComplexityIndex;
     public int iAttIndex;
     public int iMinInstances;
@@ -89,21 +89,15 @@ public class MyC45Split extends MyClassifierSplitModel {
         }
         firstMiss = i;
 
-        /**
-         *
-         */
-        minSplit =  0.1 * dDistribution.total() / ((double) data.numClasses()); // dari mana 0.1 ?????????????????????
+        minSplit =  0.1 * dDistribution.total() / ((double) data.numClasses());
         if (Utils.smOrEq(minSplit, iMinInstances)) {
             minSplit = iMinInstances;
         }
         else {
             if (Utils.gr(minSplit,25)) {
-                minSplit = 25; // dari mana 25 ????????????????????????????????????????????????????????????????????????
+                minSplit = 25;
             }
         }
-        /**
-         *
-         */
 
         // cek apakah jumlah instance lebih besar dari jumlah instance minimal
         if (Utils.sm((double) firstMiss, 2 * minSplit)) {
