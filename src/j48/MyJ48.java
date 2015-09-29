@@ -2,7 +2,6 @@ package j48;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.Sourcable;
-import weka.classifiers.trees.j48.ClassifierSplitModel;
 import weka.classifiers.trees.j48.Distribution;
 import weka.core.AdditionalMeasureProducer;
 import weka.core.Capabilities;
@@ -27,8 +26,9 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
     private int testI;
     private boolean bEmpty;
     private boolean bLeaf;
-    private ClassifierSplitModel csmLocalModel;
+    private MyClassifierSplitModel csmLocalModel;
     private MyJ48[] ctSons;
+    private Instances dataInstances;
 
     @Override
     public Capabilities getCapabilities() {
@@ -56,7 +56,7 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
         return 0.D;
     }
 
-    public final ClassifierSplitModel selectModel(Instances data) {
+    public final MyClassifierSplitModel selectModel(Instances data) {
         MyC45Split bestModel = null;
         MyNoSplit noSplitModel;
         double averageInfoGain = 0.0D;
@@ -106,7 +106,7 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
                         return noSplitModel;
                     } else {
                         if (bestModel!= null) {
-                            bestModel.distribution().addInstWithUnknown(data, bestModel.iAttIndex);
+                            bestModel.dDistribution.addInstWithUnknown(data, bestModel.iAttIndex);
                             bestModel.setSplitPoint(data);
                         }
                         System.out.println("split, best-model: " + testI);
@@ -132,6 +132,7 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
         bLeaf = false;
         bEmpty = false;
         ctSons = null;
+        dataInstances = instances;
         buildMyJ48(instances);
 
         collapse();
@@ -142,10 +143,9 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
 
     public void buildMyJ48(Instances instances) throws Exception {
         csmLocalModel = selectModel(instances);
-        if(csmLocalModel.numSubsets() > 1) {
+        if(csmLocalModel.iNumSubsets > 1) {
             Instances[] localInstances = csmLocalModel.split(instances);
-            instances = null;
-            ctSons = new MyJ48[csmLocalModel.numSubsets()];
+            ctSons = new MyJ48[csmLocalModel.iNumSubsets];
 
             for(int i = 0; i < ctSons.length; ++i) {
                 ctSons[i] = getNewTree(localInstances[i]);
@@ -156,8 +156,6 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
             if(Utils.eq(instances.sumOfWeights(), 0.0D)) {
                 bEmpty = true;
             }
-
-            instances = null;
         }
     }
 
@@ -227,11 +225,11 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
     public void collapse() {
         if(!bLeaf) {
             double errorsOfSubtree = getTrainingErrors();
-            double errorsOfTree = csmLocalModel.distribution().numIncorrect();
+            double errorsOfTree = csmLocalModel.dDistribution.numIncorrect();
             if(errorsOfSubtree >= errorsOfTree - 0.001D) {
                 ctSons = null;
                 bLeaf = true;
-                csmLocalModel = new MyNoSplit(csmLocalModel.distribution());
+                csmLocalModel = new MyNoSplit(csmLocalModel.dDistribution);
             } else {
                 for (MyJ48 ctSon : ctSons) {
                     ctSon.collapse();
@@ -245,7 +243,7 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
         int i;
 
         if (bLeaf)
-            return csmLocalModel.distribution().numIncorrect();
+            return csmLocalModel.dDistribution.numIncorrect();
         else{
             for (i=0;i<ctSons.length;i++)
                 errors = errors + ctSons[i].getTrainingErrors();
@@ -255,7 +253,46 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
 
     @Override
     public double classifyInstance(Instance instance) throws Exception {
-        return 0.D;
+        double maxProb = -1;
+        double currentProb;
+        int maxIndex = 0;
+        int j;
+
+        for (j = 0; j < instance.numClasses(); j++) {
+            currentProb = getProbs(j, instance, 1);
+            if (Utils.gr(currentProb,maxProb)) {
+                maxIndex = j;
+                maxProb = currentProb;
+            }
+        }
+
+        return (double)maxIndex;
+    }
+
+    private double getProbs(int classIndex, Instance instance, double weight) throws Exception {
+        double prob = 0;
+
+        if (bLeaf) {
+            return weight * csmLocalModel.classProb(classIndex, instance, -1);
+        } else {
+            int treeIndex = csmLocalModel.whichSubset(instance);
+            if (treeIndex == -1) {
+                double[] weights = csmLocalModel.weights(instance);
+                for (int i = 0; i < ctSons.length; i++) {
+                    if (!ctSons[i].bEmpty) {
+                        prob += ctSons[i].getProbs(classIndex, instance, weights[i] * weight);
+                    }
+                }
+                return prob;
+            } else {
+                if (ctSons[treeIndex].bEmpty) {
+                    return weight * csmLocalModel.classProb(classIndex, instance,
+                            treeIndex);
+                } else {
+                    return ctSons[treeIndex].getProbs(classIndex, instance, weight);
+                }
+            }
+        }
     }
 
     @Override
@@ -299,7 +336,78 @@ public class MyJ48 extends Classifier implements OptionHandler, Drawable, Matcha
     }
 
     public String toString() {
-        return "Print Something";
+        try {
+            StringBuffer text = new StringBuffer();
+
+            if (bLeaf) {
+                text.append(": ");
+                text.append(csmLocalModel.dumpLabel(0, dataInstances));
+            }else {
+                System.out.println("lewat 1");
+                dumpTree(0, text);
+                System.out.println("lewat 2");
+            }
+            text.append("\n\nNumber of Leaves  : \t"+numLeaves()+"\n");
+            text.append("\nSize of the tree : \t"+numNodes()+"\n");
+
+            return text.toString();
+        } catch (Exception e) {
+            return "Can't print classification tree. asdasdasdasd";
+        }
+    }
+
+    private void dumpTree(int depth, StringBuffer text) throws Exception {
+        System.out.println("lewat sini oke, depth: " + depth);
+        int i,j;
+        for (i=0; i<ctSons.length; i++) {
+            text.append("\n");
+
+            for (j=0;j<depth;j++) {
+                text.append("|   ");
+            }
+
+            text.append(csmLocalModel.leftSide(dataInstances));
+            System.out.println("lewat depth: " + depth);
+            text.append(csmLocalModel.rightSide(i, dataInstances));
+            System.out.println("ihsrg");
+
+            if (ctSons[i].bLeaf) {
+                text.append(": ");
+                text.append(csmLocalModel.dumpLabel(i, dataInstances));
+            } else
+                ctSons[i].dumpTree(depth+1, text);
+        }
+    }
+
+    public int numLeaves() {
+        int num = 0;
+
+        if (bLeaf) {
+            return 1;
+        }
+        else {
+            for (int i=0;i<ctSons.length;i++) {
+                num = num+ctSons[i].numLeaves();
+            }
+
+            return num;
+        }
+
+    }
+
+    public int numNodes() {
+        int nodes = 1;
+
+        if (bLeaf) {
+            return 1;
+        }
+        else {
+            for (int i=0;i<ctSons.length;i++) {
+                nodes = nodes + ctSons[i].numNodes();
+            }
+
+            return nodes;
+        }
     }
 
 }

@@ -1,6 +1,5 @@
 package j48;
 
-import weka.classifiers.trees.j48.ClassifierSplitModel;
 import weka.classifiers.trees.j48.Distribution;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -8,33 +7,28 @@ import weka.core.Instances;
 /**
  * Created by rikysamuel on 9/29/2015.
  */
-public class MyNoSplit extends ClassifierSplitModel {
+public class MyNoSplit extends MyClassifierSplitModel {
 
     public MyNoSplit(Distribution dist){
 
-        m_distribution = new Distribution(dist);
-        m_numSubsets = 1;
+        dDistribution = new Distribution(dist);
+        iNumSubsets = 1;
     }
 
     @Override
     public void buildClassifier(Instances instances) throws Exception {
-        m_distribution = new Distribution(instances);
-        m_numSubsets = 1;
+        dDistribution = new Distribution(instances);
+        iNumSubsets = 1;
     }
 
     @Override
     public String leftSide(Instances data) {
-        return null;
+        return "";
     }
 
     @Override
     public String rightSide(int index, Instances data) {
-        return null;
-    }
-
-    @Override
-    public String sourceExpression(int index, Instances data) {
-        return null;
+        return "";
     }
 
     @Override
