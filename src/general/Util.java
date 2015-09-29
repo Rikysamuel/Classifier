@@ -252,13 +252,9 @@ public class Util {
         try {
             int trainSize = (int) Math.round(data.numInstances()* trainPercent / 100);
             int testSize = data.numInstances() - trainSize;
-            System.out.println("trainSize " + trainSize);
-            System.out.println("testSize " + testSize);
             
             data.randomize(new Random(1));
-            for (int i=0; i<data.numInstances(); i++) {
-                System.out.println("Harakiri : " + data.instance(i));
-            }
+
             Instances train = new Instances(data, 0, trainSize);
             Instances test = new Instances(data, trainSize, testSize);
             train.setClassIndex(train.numAttributes()-1);
